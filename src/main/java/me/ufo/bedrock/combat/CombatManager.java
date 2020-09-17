@@ -8,15 +8,24 @@ import me.ufo.bedrock.Bedrock;
 import me.ufo.bedrock.module.Module;
 import me.ufo.shaded.it.unimi.dsi.fastutil.objects.Object2LongMap;
 import me.ufo.shaded.it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import me.ufo.shaded.it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import me.ufo.shaded.it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 public final class CombatManager implements Module {
 
-  private static CombatManager instance;
   private final Bedrock plugin;
+  private static CombatManager instance;
 
   /* CONFIG VALUES */
   private final long tagTime;
@@ -29,7 +38,9 @@ public final class CombatManager implements Module {
   private final List<String> whitelistedCommands;
 
   private final Object2LongMap<UUID> tagged;
+  private final Object2ObjectMap<UUID, Npc> npcs;
   private BukkitTask taggedTask;
+  private BukkitTask npcNameTask;
 
   public CombatManager(final Bedrock plugin) {
     this.plugin = plugin;
@@ -45,8 +56,9 @@ public final class CombatManager implements Module {
     this.whitelistedCommands = section.getStringList("whitelisted-commands");
 
     this.tagged = new Object2LongOpenHashMap<>();
+    this.npcs = new Object2ObjectOpenHashMap<>();
 
-    plugin.registerListeners(new CombatListener(this));
+    plugin.registerListeners(new CombatListener(plugin, this));
     // TODO: NMS command registration
     plugin.getCommand("combat").setExecutor(new CombatCommand());
 
@@ -57,7 +69,7 @@ public final class CombatManager implements Module {
 
   @Override
   public void onDisable() {
-    this.cancelTask();
+    this.cancelTaggedTask();
   }
 
   public void tag(final Player damager, final Player damaged) {
@@ -90,12 +102,16 @@ public final class CombatManager implements Module {
     this.triggerTaggedTask();
   }
 
-  public void untag(final Player player, final boolean notify) {
-    tagged.removeLong(player.getUniqueId());
-
-    if (notify) {
-      player.sendMessage(finishTagged);
+  public boolean untag(final Player player, final boolean notify) {
+    if (tagged.removeLong(player.getUniqueId()) != 0L) {
+      Bukkit.getLogger().info("untagged");
+      if (notify) {
+        player.sendMessage(finishTagged);
+      }
+      return true;
     }
+
+    return false;
   }
 
   public boolean isTagged(final Player player) {
@@ -106,11 +122,8 @@ public final class CombatManager implements Module {
     return new BukkitRunnable() {
       @Override
       public void run() {
-        plugin.info("size: " + tagged.size());
-
         if (tagged.isEmpty()) {
-          plugin.info("cancelling: " + tagged.size());
-          cancelTask();
+          cancelTaggedTask();
           return;
         }
 
@@ -135,15 +148,16 @@ public final class CombatManager implements Module {
     }
   }
 
-  private void cancelTask() {
+  private void cancelTaggedTask() {
     if (taggedTask != null) {
       taggedTask.cancel();
+      taggedTask = null;
     }
-    taggedTask = null;
   }
 
   public void sendTimeLeftTaggedMessage(final Player player) {
     final long timeUntilNoTag = tagged.getLong(player.getUniqueId());
+
     if (timeUntilNoTag == 0L) {
       player.sendMessage(notTagged);
     } else {
@@ -161,8 +175,106 @@ public final class CombatManager implements Module {
         return true;
       }
     }
+
     player.sendMessage(commandTagged);
     return false;
+  }
+
+  public void spawnNpc(final Player player) {
+    Bukkit.getLogger().info("spawning npc");
+    final Location location = player.getLocation();
+    final Npc npc = new Npc(
+      player.getUniqueId(),
+      player.getName(),
+      location.getWorld().spawnEntity(location, EntityType.VILLAGER)
+    );
+    final LivingEntity entity = (LivingEntity) npc.getEntity();
+
+    // TODO: check if nametag is always visible
+    entity.setCustomNameVisible(true);
+    npc.setCustomName();
+    entity.setMetadata("COMBAT_NPC", new FixedMetadataValue(plugin, true));
+    entity.setCanPickupItems(false);
+    entity.setHealth(player.getHealth());
+    entity.setMaxHealth(player.getMaxHealth());
+    entity.getLocation().setPitch(location.getPitch());
+    entity.getLocation().setYaw(location.getYaw());
+
+    for (final ItemStack armor : player.getInventory().getArmorContents()) {
+      if (armor != null && armor.getType() != Material.AIR) {
+        npc.getItems().add(armor);
+      }
+    }
+
+    for (final ItemStack item : player.getInventory().getContents()) {
+      if (item != null && item.getType() != Material.AIR) {
+        npc.getItems().add(item);
+      }
+    }
+
+    npcs.put(entity.getUniqueId(), npc);
+
+    this.triggerNpcNameTask();
+  }
+
+  public void removeNpc(final UUID uniqueId) {
+    npcs.remove(uniqueId).destroy();
+  }
+
+  public Npc getNpc(final UUID uniqueId) {
+    return npcs.get(uniqueId);
+  }
+
+  public Npc getNpcByPlayerUniqueId(final UUID uniqueId) {
+    for (final Object2ObjectMap.Entry<UUID, Npc> entry : npcs.object2ObjectEntrySet()) {
+      final Npc npc = entry.getValue();
+      if (npc.getUniqueId().equals(uniqueId)) {
+        return npc;
+      }
+    }
+
+    return null;
+  }
+
+  private BukkitRunnable getNpcNameTask() {
+    return new BukkitRunnable() {
+      @Override
+      public void run() {
+        if (npcs.isEmpty()) {
+          cancelNpcNameTask();
+          return;
+        }
+
+        final Iterator<Object2ObjectMap.Entry<UUID, Npc>> iterator = npcs.object2ObjectEntrySet().iterator();
+        while (iterator.hasNext()) {
+          final Npc npc = iterator.next().getValue();
+
+          final int secondsTillDespawn = npc.decrementSecondsLeft();
+
+          if (secondsTillDespawn <= 0) {
+            npc.removeEntity();
+            npc.destroy();
+            iterator.remove();
+            return;
+          }
+
+          npc.setCustomName();
+        }
+      }
+    };
+  }
+
+  private void triggerNpcNameTask() {
+    if (npcNameTask == null) {
+      npcNameTask = this.getNpcNameTask().runTaskTimer(plugin, 0L, 20L);
+    }
+  }
+
+  private void cancelNpcNameTask() {
+    if (npcNameTask != null) {
+      npcNameTask.cancel();
+      npcNameTask = null;
+    }
   }
 
   public static CombatManager get() {
