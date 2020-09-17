@@ -1,0 +1,7 @@
+name: Bedrock
+version: ${project.version}
+main: me.ufo.bedrock.Bedrock
+depend: [Architect]
+commands:
+  combat:
+    aliases: [ct]
