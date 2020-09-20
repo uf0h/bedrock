@@ -41,13 +41,7 @@ public final class SpawnManager implements Module {
     final World world = plugin.getServer().getWorld(location[0]);
     if (location[1].isEmpty()) {
       spawnLocation = world.getSpawnLocation().add(new Vector(0.5, 0, 0.5));
-
-      config.set("spawn-location", this.locationToString(spawnLocation));
-      try {
-        config.save(spawnFile);
-      } catch (final IOException e) {
-        e.printStackTrace();
-      }
+      this.setSpawnLocation(spawnLocation);
     } else {
       spawnLocation = new Location(
         world,
