@@ -14,7 +14,7 @@ combat-module:
   lang:
     damager-tagged: "&cYou have combat tagged {player}."
     damaged-tagged: "&cYou have been combat tagged by {player}."
-    finish-tagged: "&7You are not longer in combat."
+    finish-tagged: "&7You are no longer in combat."
     time-left-tagged: "&cYou have {time} seconds left tagged."
     not-tagged: "&7You are not combat tagged."
     command-tagged: "&cYou cannot do this command while tagged."
