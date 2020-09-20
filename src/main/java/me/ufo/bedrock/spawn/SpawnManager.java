@@ -29,6 +29,7 @@ public final class SpawnManager implements Module {
       plugin.saveResource("spawn.yml", false);
     }
 
+    // local variable to allow gc to clean up
     final YamlConfiguration config = new YamlConfiguration();
 
     try {
@@ -73,6 +74,7 @@ public final class SpawnManager implements Module {
       plugin.saveResource("spawn.yml", false);
     }
 
+    // local variable to allow gc to clean up
     final YamlConfiguration config = new YamlConfiguration();
 
     try {
