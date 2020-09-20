@@ -5,3 +5,4 @@ depend: [Architect]
 commands:
   combat:
     aliases: [ct]
+  setspawn:

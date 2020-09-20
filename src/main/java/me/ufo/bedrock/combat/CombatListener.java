@@ -1,7 +1,10 @@
 package me.ufo.bedrock.combat;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import me.ufo.bedrock.Bedrock;
+import me.ufo.bedrock.spawn.SpawnManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.AnimalTamer;
@@ -14,6 +17,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
@@ -26,12 +30,13 @@ public final class CombatListener implements Listener {
   private final Bedrock plugin;
   private final CombatManager manager;
 
+  private final Set<UUID> clear;
   private final Vector ZERO_VECTOR;
 
   public CombatListener(final Bedrock plugin, final CombatManager manager) {
     this.plugin = plugin;
     this.manager = manager;
-
+    this.clear = new HashSet<>();
     this.ZERO_VECTOR = new Vector();
   }
 
@@ -101,10 +106,9 @@ public final class CombatListener implements Listener {
     }
   }
 
-  @EventHandler(priority = EventPriority.NORMAL)
-  public void onPlayerJoinEvent(final PlayerJoinEvent event) {
-    final Player player = event.getPlayer();
-    final Npc npc = manager.getNpcByPlayerUniqueId(player.getUniqueId());
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void onAsyncPlayerPreLoginEvent(final AsyncPlayerPreLoginEvent event) {
+    final Npc npc = manager.getNpcByPlayerUniqueId(event.getUniqueId());
 
     if (npc == null) {
       Bukkit.getLogger().info("null join");
@@ -112,11 +116,26 @@ public final class CombatListener implements Listener {
     }
 
     if (npc.getEntity().isDead()) {
-      npc.removeEntity();
-      Bukkit.getScheduler().runTaskLater(plugin, () -> {
-        Bukkit.getLogger().info("respawning...");
-        // TODO: teleport to spawn
-      }, 2L);
+      clear.add(event.getUniqueId());
+    }
+
+    manager.removeNpc(npc.getEntity().getUniqueId());
+  }
+
+  @EventHandler(priority = EventPriority.NORMAL)
+  public void onPlayerJoinEvent(final PlayerJoinEvent event) {
+    final Player player = event.getPlayer();
+    final UUID uniqueId = player.getUniqueId();
+
+    if (clear.remove(uniqueId)) {
+      final SpawnManager spawnManager = SpawnManager.getNullable();
+      if (spawnManager != null) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+          Bukkit.getLogger().info("respawning...");
+          // TODO: teleport to spawn
+          spawnManager.teleport(player);
+        }, 2L);
+      }
 
       player.getInventory().clear();
       player.getInventory().setArmorContents(null);
@@ -124,8 +143,6 @@ public final class CombatListener implements Listener {
       player.setHealth(player.getMaxHealth());
       player.setFoodLevel(20);
     }
-
-    manager.removeNpc(npc.getEntity().getUniqueId());
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

@@ -1,5 +1,6 @@
 modules:
   combat-module: true
+  spawn-module: true
 
 combat-module:
   tag-time: 10

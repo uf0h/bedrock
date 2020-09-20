@@ -14,35 +14,30 @@ public final class Npc {
   private final String name;
   private Entity entity;
   private List<ItemStack> items;
-  private final long spawnTime;
-  private int millisecondsLeft;
+  private int secondsLeft;
 
   public Npc(final UUID uniqueId, final String name, final Entity entity) {
     this.uniqueId = uniqueId;
     this.name = name;
     this.entity = entity;
     this.items = new ArrayList<>();
-    this.spawnTime = System.currentTimeMillis();
-    this.millisecondsLeft = 60000;
+    this.secondsLeft = 60;
   }
 
   public void setCustomName() {
     if (!entity.isDead()) {
-      entity.setCustomName(name + " " + ChatColor.RED.toString() + (millisecondsLeft / 1000) + "s");
+      entity.setCustomName(name + " " + ChatColor.RED.toString() + secondsLeft + "s");
     }
   }
 
   public int decrementSecondsLeft() {
-    millisecondsLeft = millisecondsLeft - 1000;
-    return millisecondsLeft;
-  }
-
-  public void removeEntity() {
-    entity.remove();
+    secondsLeft = secondsLeft - 1;
+    return secondsLeft;
   }
 
   public void destroy() {
     entity.removeMetadata("COMBAT_NPC", Bedrock.get());
+    entity.remove();
     entity = null;
     items = null;
   }

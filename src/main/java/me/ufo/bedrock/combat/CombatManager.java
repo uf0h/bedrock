@@ -197,8 +197,6 @@ public final class CombatManager implements Module {
     entity.setCanPickupItems(false);
     entity.setHealth(player.getHealth());
     entity.setMaxHealth(player.getMaxHealth());
-    entity.getLocation().setPitch(location.getPitch());
-    entity.getLocation().setYaw(location.getYaw());
 
     for (final ItemStack armor : player.getInventory().getArmorContents()) {
       if (armor != null && armor.getType() != Material.AIR) {
@@ -249,10 +247,7 @@ public final class CombatManager implements Module {
         while (iterator.hasNext()) {
           final Npc npc = iterator.next().getValue();
 
-          final int secondsTillDespawn = npc.decrementSecondsLeft();
-
-          if (secondsTillDespawn <= 0) {
-            npc.removeEntity();
+          if (npc.decrementSecondsLeft() <= 0) {
             npc.destroy();
             iterator.remove();
             return;
