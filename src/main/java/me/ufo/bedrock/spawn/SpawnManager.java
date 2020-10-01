@@ -3,8 +3,6 @@ package me.ufo.bedrock.spawn;
 import java.io.File;
 import java.io.IOException;
 import me.ufo.bedrock.Bedrock;
-import me.ufo.bedrock.combat.CombatCommand;
-import me.ufo.bedrock.combat.CombatManager;
 import me.ufo.bedrock.module.Module;
 import org.bukkit.Location;
 import org.bukkit.World;
