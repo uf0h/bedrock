@@ -1,0 +1,6 @@
+no-permission: "&cYou do not have the required permission."
+command-usage: "&f/{command}"
+player-not-found: "&cPlayer not found."
+invalid-input: "&cThat is not a valid input."
+
+# teleport

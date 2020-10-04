@@ -24,8 +24,9 @@ import org.bukkit.scheduler.BukkitTask;
 
 public final class CombatManager implements Module {
 
-  private final Bedrock plugin;
   private static CombatManager instance;
+
+  private final Bedrock plugin;
 
   /* CONFIG VALUES */
   private final long tagTime;
@@ -58,9 +59,15 @@ public final class CombatManager implements Module {
     this.tagged = new Object2LongOpenHashMap<>();
     this.npcs = new Object2ObjectOpenHashMap<>();
 
-    plugin.registerListeners(new CombatListener(plugin, this));
-    // TODO: NMS command registration
-    plugin.getCommand("combat").setExecutor(new CombatCommand());
+    this.registerListeners(
+      new CombatListener(plugin, this)
+    );
+
+    this.registerCommands(
+      new String[] {
+        "combat"
+      }, new CombatCommand()
+    );
 
     if (plugin.isVerboseMode()) {
       plugin.info("CombatModule enabled.");

@@ -28,6 +28,8 @@ public final class Bedrock extends JavaPlugin {
   @Override
   public void onEnable() {
     moduleManager = new ModuleManager(this);
+
+    new Lang(this);
   }
 
   @Override

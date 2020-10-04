@@ -6,3 +6,15 @@ commands:
   combat:
     aliases: [ct]
   setspawn:
+  tp:
+  tploc:
+  tptoggle:
+  tpoffline:
+  tpall:
+  tpa:
+  tpahere:
+  tpaall:
+  tpacancel:
+  tpaccept:
+    aliases: [tpyes]
+  tpdeny:

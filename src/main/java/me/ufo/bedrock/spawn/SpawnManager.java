@@ -13,10 +13,9 @@ import org.bukkit.util.Vector;
 
 public final class SpawnManager implements Module {
 
-
-  private final Bedrock plugin;
   private static SpawnManager instance;
 
+  private final Bedrock plugin;
   private Location spawnLocation;
 
   public SpawnManager(final Bedrock plugin) {
@@ -53,7 +52,12 @@ public final class SpawnManager implements Module {
     }
 
     // TODO: NMS command registration
-    plugin.getCommand("setspawn").setExecutor(new SetSpawnCommand());
+    this.registerCommands(
+      new String[] {
+        "setspawn"
+      },
+      new SetSpawnCommand()
+    );
 
     if (plugin.isVerboseMode()) {
       plugin.info("SpawnModule enabled.");
